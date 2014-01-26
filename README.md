@@ -1,5 +1,9 @@
-fh-muenster-bde-lesson-2
-========================
+=================================
+FH Münster - Big Data Engineering
+=================================
+
+Code für Übung Nummer 2
+-----------------------
 
 Code für die Übung #2 des Big Data Engineering Kurses der FH Münster im Wintersemester 2013.
 
