@@ -3,7 +3,7 @@ Die folgenden Kommandos werden in der Cloudera QuickStart VM in einem Terminal F
 
 Klonen des Source Repositories in einem Terminal:
 ```
-$ clone https://github.com/larsgeorge/fh-muenster-bde-lesson-2
+$ git clone https://github.com/larsgeorge/fh-muenster-bde-lesson-2
 ```
 
 Download eines Beispiel Textes:
