@@ -1,7 +1,8 @@
 ## Kommandos
-Die folgenden Kommandos werden in der Cloudera QuickStart VM in einem Terminal Fenster ausgeführt. Dazu muss in der Menüzeile am oberen Bildschirmrand auf der linken Seite auf das Terminal Icon geklickt werden. Danach folgendes machen:
 
-Klonen des Source Repositories in einem Terminal:
+ACHTUNG: Bitte die Hinweise aus der `commands.md` aus der ersten Übung beachten, in Bezug auf die Unterschiede zwischen der Cloudera VM, und der Hortonworks Sandbox VM. Für diese Übung kommt hinzu, dass die _Cloudera VM_ eine Eclipse Version unter X-Windows mitbringt, wobei dann alle unten stehenden Befehle direkt in der VM ausgeführt werden. Die _Hortonworks Sandbox_ hat dies nicht, weshalb die Kommandos auf dem Host (Windows, MacOS, oder Linux) mit einer eigenen Eclipse Installation durchzuführen sind. Dazu sind die Befehle unten mit "(ggf. lokalen)" Hinweis entsprechend gekennzeichnet. Alles anderen Befehle muessen dann innerhalb der VM Sitzung ausgeführt werden. Wenn nötig werden zwischen beiden Varianten im Text nochmals genauer unterschieden.
+
+Zuerst kommt das Klonen des Source Repositories in einem (ggf. _lokalen_) Terminal:
 ```
 $ git clone https://github.com/larsgeorge/fh-muenster-bde-lesson-2
 ```
@@ -18,45 +19,87 @@ $ less pg14591.txt
 
 HDFS anschauen:
 ```
-$ hadoop fs -ls
-$ hadoop fs -ls /
-$ hadoop fs -ls /user/
-$ hadoop fs -ls /user/cloudera
+$ hdfs dfs -ls
+$ hdfs dfs -ls /
+$ hdfs dfs -ls /user/
+$ hdfs dfs -ls /user/cloudera
+```
+oder (für Hortonworks):
+```
+$ hdfs dfs -ls /user/root
 ```
 
 Das Dokument in HDFS speichern und kontrollieren:
 ```
-$ hadoop fs -put pg14591.txt
-$ hadoop fs -ls /user/cloudera
+$ hdfs dfs -put pg14591.txt
+$ hdfs dfs -ls /user/cloudera
 ```
+oder
+```
+$ hdfs dfs -ls /user/root
+```
+bzw. sollte ein einfaches 
+```
+$ hdfs dfs -ls
+```
+reichen, denn das Kommando nimmt immer den aktuellen User Pfad.
 
-Die aktuelle Konfiguration gibt Aufschluss wo sich die eigentlichen Daten innerhalb von HDFS befinden (siehe dfs.datanode.data.dir):
+Die aktuelle Konfiguration gibt Aufschluss wo sich die eigentlichen Daten innerhalb von HDFS befinden (siehe `dfs.datanode.data.dir`):
 ```
 $ ll /etc/hadoop/conf/
 $ cat /etc/hadoop/conf/core-site.xml
 ```
 
-Kopieren des Source Codes des Projekts in das Eclipse Workspace Verzeichnis. 
-Note: Zuerst Eclipse starten und ein neues Projekt anlegen, hier genannt “uebung-2”.
+Kopieren (ggf. lokal) des Source Codes des Projekts in das Eclipse Workspace Verzeichnis. 
+Hinweis: Zuerst Eclipse starten und ein neues Projekt anlegen, hier genannt “uebung-2”.
 ```
 $ ll workspace/uebung-2/src/
 $ cp -r fh-muenster-bde-lesson-2/src/* workspace/uebung-2/src/
 ```
+Alternativ kann man den Import Wizard von Eclipse nehmen:
 
-In Eclipse alle JAR Dateien aus /usr/lib/hadoop/client zu dem Projekt hinzufügen. In Eclipse über File - Export den Code als JAR zusammen packen (hier uebung-2-small.jar benannt und im Benutzer Verzeichnis abgelegt) und die Driver.class als Hauptklasse eintragen. Danach kann die JAR Datei auf der Kommandozeile ausgeführt werden:
+![Eclipse Import Dialog](https://github.com/larsgeorge/fh-muenster-bde-lesson-2/raw/master/img/import.png "Eclipse Import Dialog")
+
+Den Wizard auf das Verzeichnis mit der lokalen Repository zeigen lassen ("Select root directory" auf der zweiten Seite des Wizards), dann importieren. Dies kopiert dann alles in die eingestellte Workspace und kann von dort aus benutzt werden.
+
+Nun müssen die JAR Dateien in Eclipse dem Projekt hinzugefügt werden. Dies ist VM abhängig verschieden:
+
+- Für die _Cloudera VM_: Alle JAR Dateien aus /usr/lib/hadoop/client zu dem Projekt hinzufügen.
+
+- Für die _Hortonworks VM_: Über `scp` oder WinSCP müssen alle Dateien aus `/usr/hdp/current/hadoop-client/` und `/usr/hdp/current/hadoop-mapreduce-client/` in ein lokales Verzeichnis kopiert werden. Dann noch die mit kopierte `mapreduce.tar.gz ` entpacken.
+
+Danach alle JAR Dateien über die Projekt Einstellungen mit "Add External JARs" hinzufügen:
+
+![Eclipse Projekt Dialog](https://github.com/larsgeorge/fh-muenster-bde-lesson-2/raw/master/img/jars.png "Eclipse Projekt Dialog")
+
+Jetzt sollte der Code übersetzbar sein, und die IDE keine rot unterstrichenen Zeilen mehr anzeigen.
+
+In Eclipse über "File - Export" (oder einfacher einen Doppelklick auf die `mrjobs.jardesc` im Hauptverzeichnis des Projekts) den Code als JAR zusammen packen (hier `mrjobs.jar` benannt und im Workspace Verzeichnis abgelegt) und die `Driver.class` als Hauptklasse eintragen. Danach kann, für die Cloudera VM, die JAR Datei auf der Kommandozeile ausgeführt werden:
 ```
 $ yarn
-$ yarn jar uebung-2-small.jar
-$ yarn jar uebung-2-small.jar wordcount
-$ yarn jar uebung-2-small.jar wordcount pg14591.txt out1
+$ yarn jar mrjobs.jar
+$ yarn jar mrjobs.jar wordcount
+$ yarn jar mrjobs.jar wordcount pg14591.txt out1
 ```
 
-Ergebnisse ausprobieren:
+Hinweis: Für die Hortonworks VM muss zuerst die JAR Datei über `scp` oder WinSCP von dem lokalen Verzeichnis in die VM kopiert werden, z. B. so (auf einem MacOS Notebook):
 ```
-$ hadoop fs -ls
-$ hadoop fs -ls out1/
-$ hadoop fs -cat out1/part-00000 | less
-$ hadoop fs -cat out1/part-00000 | sort -g -k2 -r | less
+$ cd ~/Documents/workspace 
+$ ls -la
+total 5320
+-rw-r--r--   1 larsgeorge  staff    20K Nov  3 13:00 mrjobs.jar
+
+$ scp -P 2222 mrjobs.jar root@localhost: 
+root@localhost's password: 
+mrjobs.jar                        100%   20KB  19.9KB/s   00:00
+```
+
+Ergebnisse ausprobieren (wieder in der VM):
+```
+$ hdfs dfs -ls
+$ hdfs dfs -ls out1/
+$ hdfs dfs -cat out1/part-00000 | less
+$ hdfs dfs -cat out1/part-00000 | sort -g -k2 -r | less
 the 1745
 and 848
 of 721
@@ -73,22 +116,51 @@ my 262
 ...
 ```
 
-Hadoop hat eine Beispiel JAR für MapReduce beigefügt, welche wie folgt aufgerufen werden kann:
+Hadoop hat eine Beispiel JAR für MapReduce beigefügt, welche wie folgt, für die Cloudera VM, aufgerufen werden kann:
 ```
 $ yarn jar /usr/lib/hadoop-0.20-mapreduce/hadoop-examples.jar
 $ yarn jar /usr/lib/hadoop-0.20-mapreduce/hadoop-examples.jar wordcount pg14591.txt out2
-$ hadoop fs -ls out2/
-$ hadoop fs -cat out2/part-r-00000 | sort -g -k2 -r | less
+$ hdfs dfs -ls out2/
+$ hdfs dfs -cat out2/part-r-00000 | sort -g -k2 -r | less
 ```
 
 Neben dem WordCount Beispiel hat das Code Repository auch noch den LogGenerator und LogAnalyzer Source dabei:
 ```
-$ yarn jar uebung-2-small.jar
-$ yarn jar uebung-2-small.jar loggenerator out4/web-large.log 20000000
-$ hadoop fs -ls -h out4/
+$ yarn jar mrjobs.jar
+$ yarn jar mrjobs.jar loggenerator out4/web-large.log 20000000
+$ hdfs dfs -ls -h out4/
 ```
 
-Einschub: Mit dem HDFS Kommando kann man nachschauen, wo die einzelnen Blöcke abgelegt werden:
+Für die Hortonworks VM muss ein anderes Verzeichnis für die Beispiel JAR genutzt werden:
+```  
+$ yarn jar /usr/hdp/current/hadoop-mapreduce-client/hadoop-mapreduce-examples.jar 
+An example program must be given as the first argument.
+Valid program names are:
+  aggregatewordcount: An Aggregate based map/reduce program that counts the words in the input files.
+  aggregatewordhist: An Aggregate based map/reduce program that computes the histogram of the words in the input files.
+  bbp: A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact digits of Pi.
+  dbcount: An example job that count the pageview counts from a database.
+  distbbp: A map/reduce program that uses a BBP-type formula to compute exact bits of Pi.
+  grep: A map/reduce program that counts the matches of a regex in the input.
+  join: A job that effects a join over sorted, equally partitioned datasets
+  multifilewc: A job that counts words from several files.
+  pentomino: A map/reduce tile laying program to find solutions to pentomino problems.
+  pi: A map/reduce program that estimates Pi using a quasi-Monte Carlo method.
+  randomtextwriter: A map/reduce program that writes 10GB of random textual data per node.
+  randomwriter: A map/reduce program that writes 10GB of random data per node.
+  secondarysort: An example defining a secondary sort to the reduce.
+  sort: A map/reduce program that sorts the data written by the random writer.
+  sudoku: A sudoku solver.
+  teragen: Generate data for the terasort
+  terasort: Run the terasort
+  teravalidate: Checking results of terasort
+  wordcount: A map/reduce program that counts the words in the input files.
+  wordmean: A map/reduce program that counts the average length of the words in the input files.
+  wordmedian: A map/reduce program that counts the median length of the words in the input files.
+  wordstandarddeviation: A map/reduce program that counts the standard deviation of the length of the words in the input files.
+```  
+  
+Einschub: Mit dem HDFS Kommando kann man nachschauen, wo die einzelnen Blöcke abgelegt werden (hier für die Cloudera VM gezeigt):
 ```
 $ hdfs
 $ hdfs fsck
@@ -127,10 +199,8 @@ Missing replicas: 0 (0.0 %)
 Number of data-nodes: 1
 Number of racks: 1
 FSCK ended at Thu Nov 06 06:22:05 PST 2014 in 5 milliseconds
-```
-
 The filesystem under path '/user/cloudera/out4/web-large.log' is HEALTHY
-```
+
 $ ll /var/lib/hadoop-hdfs/cache/
 $ ll /var/lib/hadoop-hdfs/cache/hdfs/dfs/data/
 $ sudo ls -la /var/lib/hadoop-hdfs/cache/hdfs/dfs/data/
@@ -139,13 +209,15 @@ $ sudo ls -la -R /var/lib/hadoop-hdfs/cache/hdfs/dfs/data/current
 
 Der LogAnalyzer wird wie folgt ausgeführt:
 ```
-$ yarn jar uebung-2-small.jar loganalyzer out4/web-large.log out4  # produziert Fehler wie erwartet
-$ yarn jar uebung-2-small.jar loganalyzer out4/web-large.log out5
-$ hadoop fs -ls out5/
+$ yarn jar mrjobs.jar loganalyzer out4/web-large.log out4  # produziert Fehler wie erwartet
+$ yarn jar mrjobs.jar loganalyzer out4/web-large.log out5
+
+$ hdfs dfs -ls out5/
 Found 2 items
 -rw-r--r-- 1 cloudera cloudera 0 2014-11-06 04:31 out5/_SUCCESS
 -rw-r--r-- 1 cloudera cloudera 70 2014-11-06 04:31 out5/part-00000
-$ hadoop fs -cat out5/part-00000
+
+$ hdfs dfs -cat out5/part-00000
 /contacts.html  1407017280
 /index.html     1408035667
 /logo.gif       1403731303
@@ -218,10 +290,13 @@ drwxr-xr-x 5 hdfs hdfs 4096 Nov 1 22:07 ..
 -rw-r--r-- 1 hdfs hdfs 1048583 Nov 6 04:10 blk_1073742425_1605.meta
 -rw-r--r-- 1 hdfs hdfs 84871394 Nov 6 04:10 blk_1073742427
 -rw-r--r-- 1 hdfs hdfs 663067 Nov 6 04:10 blk_1073742427_1607.meta
+
 [cloudera@quickstart ~]$ sudo ls -la /var/lib/hadoop-hdfs/cache/hdfs/dfs/data/current/BP-1256644290-127.0.0.1-1413121757039/current/finalized/subdir0/subdir2/blk_1073742414
 -rw-r--r-- 1 hdfs hdfs 134217728 Nov 6 04:10 /var/lib/hadoop-hdfs/cache/hdfs/dfs/data/current/BP-1256644290-127.0.0.1-1413121757039/current/finalized/subdir0/subdir2/blk_1073742414
+
 [cloudera@quickstart ~]$ sudo less /var/lib/hadoop-hdfs/cache/hdfs/dfs/data/current/BP-1256644290-127.0.0.1-1413121757039/current/finalized/subdir0/subdir2/blk_1073742414
-[cloudera@quickstart ~]$ yarn jar uebung-2-small.jar loganalyzer out4/web-large.log out4
+
+[cloudera@quickstart ~]$ yarn jar mrjobs.jar loganalyzer out4/web-large.log out4
 14/11/06 04:25:27 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
 14/11/06 04:25:28 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
 org.apache.hadoop.mapred.FileAlreadyExistsException: Output directory hdfs://quickstart.cloudera:8020/user/cloudera/out4 already exists
@@ -257,7 +332,8 @@ at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
 at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
 at java.lang.reflect.Method.invoke(Method.java:606)
 at org.apache.hadoop.util.RunJar.main(RunJar.java:212)
-[cloudera@quickstart ~]$ yarn jar uebung-2-small.jar loganalyzer out4/web-large.log out5
+
+[cloudera@quickstart ~]$ yarn jar mrjobs.jar loganalyzer out4/web-large.log out5
 14/11/06 04:26:13 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
 14/11/06 04:26:13 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
 14/11/06 04:26:14 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
@@ -385,11 +461,12 @@ File Input Format Counters
 Bytes Read=1561311458
 File Output Format Counters
 Bytes Written=70
-[cloudera@quickstart ~]$ hadoop fs -ls out5/
+
+[cloudera@quickstart ~]$ hdfs dfs -ls out5/
 Found 2 items
 -rw-r--r-- 1 cloudera cloudera 0 2014-11-06 04:31 out5/_SUCCESS
 -rw-r--r-- 1 cloudera cloudera 70 2014-11-06 04:31 out5/part-00000
-[cloudera@quickstart ~]$ hadoop fs -cat out5/part-00000
+[cloudera@quickstart ~]$ hdfs dfs -cat out5/part-00000
 /contacts.html  1407017280
 /index.html     1408035667
 /logo.gif       1403731303
